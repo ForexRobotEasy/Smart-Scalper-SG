@@ -1,0 +1,98 @@
+
+// Forex Robot Easy Team
+// forexroboteasy.com
+
+// Smart Scalper SG
+
+// Include necessary libraries
+#include <Trade\Trade.mqh>
+#include <DateTime.mqh>
+
+// Define the symbol and timeframe
+input string Symbol = 'SBER';
+input ENUM_TIMEFRAMES Timeframe = PERIOD_M5;
+
+// Define the trading parameters
+input double LotSize = 0.1;
+input double StopLoss = 50;
+input double TakeProfit = 100;
+
+// Define the trading function
+void OnTick()
+{
+   // Get the current price
+   double currentPrice = SymbolInfoDouble(Symbol, SYMBOL_LAST);
+
+   // Check for impulse price changes
+   double previousPrice = iClose(Symbol, Timeframe, 1);
+   double priceChange = currentPrice - previousPrice;
+
+   if (priceChange > 0)
+   {
+      // Place a buy trade
+      double sl = currentPrice - StopLoss * _Point;
+      double tp = currentPrice + TakeProfit * _Point;
+      Trade.Buy(LotSize, Symbol, sl, tp);
+   }
+   else if (priceChange < 0)
+   {
+      // Place a sell trade
+      double sl = currentPrice + StopLoss * _Point;
+      double tp = currentPrice - TakeProfit * _Point;
+      Trade.Sell(LotSize, Symbol, sl, tp);
+   }
+
+   // Check market depth for trading opportunities
+   MqlBookInfo bookInfo;
+   if (SymbolInfoBook(Symbol, bookInfo))
+   {
+      if (bookInfo.ask_volume > bookInfo.bid_volume)
+      {
+         // Place a buy trade based on increased volumes
+         double sl = currentPrice - StopLoss * _Point;
+         double tp = currentPrice + TakeProfit * _Point;
+         Trade.Buy(LotSize, Symbol, sl, tp);
+      }
+      else if (bookInfo.bid_volume > bookInfo.ask_volume)
+      {
+         // Place a sell trade based on increased volumes
+         double sl = currentPrice + StopLoss * _Point;
+         double tp = currentPrice - TakeProfit * _Point;
+         Trade.Sell(LotSize, Symbol, sl, tp);
+      }
+   }
+}
+
+// Define the main program
+int OnInit()
+{
+   // Enable automated trading
+   Trade.SetExpertMagicNumber(123456);
+   Trade.SetExpertAutoTrading(true);
+
+   // Subscribe to the symbol and timeframe
+   Trade.SetSymbol(Symbol);
+   Trade.SetSymbolPeriod(Symbol, Timeframe);
+
+   return(INIT_SUCCEEDED);
+}
+
+// Define the program termination
+void OnDeinit(const int reason)
+{
+   // Disable automated trading
+   Trade.SetExpertAutoTrading(false);
+}
+
+// Define the program start
+void OnStart()
+{
+   while (!IsStopped())
+   {
+      // Execute the trading algorithm
+      OnTick();
+
+      // Wait for the next tick
+      Sleep(1000);
+   }
+}
